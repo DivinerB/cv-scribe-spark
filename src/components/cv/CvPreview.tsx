@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Download, Save, FileText } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
-import { jsPDF } from 'jspdf';
+import { jsPDF } from "jspdf";
 import html2canvas from 'html2canvas';
 
 interface CvPreviewProps {
