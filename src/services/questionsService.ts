@@ -16,14 +16,42 @@ export const saveQuestionsToSupabase = async (questions: QuestionAnswer[]) => {
   
   const userId = userData.user.id;
   
-  const { error } = await supabase
+  // Check if the user already has questions saved
+  const { data: existingData, error: checkError } = await supabase
     .from('application_questions')
-    .upsert({
-      user_id: userId,
-      questions_data: questions,
-      updated_at: new Date().toISOString()
-    });
+    .select('*')
+    .eq('user_id', userId)
+    .maybeSingle();
     
+  if (checkError && checkError.code !== 'PGSQL_NO_ROWS_RETURNED') {
+    throw checkError;
+  }
+  
+  // If the user already has questions, update them; otherwise, insert a new row
+  let error;
+  
+  if (existingData) {
+    const { error: updateError } = await supabase
+      .from('application_questions')
+      .update({
+        questions_data: questions,
+        updated_at: new Date().toISOString()
+      })
+      .eq('user_id', userId);
+      
+    error = updateError;
+  } else {
+    const { error: insertError } = await supabase
+      .from('application_questions')
+      .insert({
+        user_id: userId,
+        questions_data: questions,
+        updated_at: new Date().toISOString()
+      });
+      
+    error = insertError;
+  }
+  
   if (error) throw error;
   
   return true;
@@ -42,7 +70,7 @@ export const getQuestions = async (): Promise<QuestionAnswer[]> => {
     .from('application_questions')
     .select('questions_data')
     .eq('user_id', userId)
-    .single();
+    .maybeSingle();
     
   if (error && error.code !== 'PGSQL_NO_ROWS_RETURNED') throw error;
   
