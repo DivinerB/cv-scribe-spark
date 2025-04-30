@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Download, Save, FileText } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { jsPDF } from "jspdf";
+import ReactMarkdown from 'react-markdown';
 
 interface CvPreviewProps {
   cvContent: string;
@@ -173,9 +174,10 @@ const CvPreview: React.FC<CvPreviewProps> = ({
           ) : (
             <div 
               ref={cvRef}
-              className="w-full h-[300px] overflow-auto p-4 border rounded-md bg-white whitespace-pre-wrap"
-              dangerouslySetInnerHTML={{ __html: cvContent.replace(/\n/g, '<br/>') }}
-            />
+              className="w-full h-[300px] overflow-auto p-4 border rounded-md bg-white"
+            >
+              <ReactMarkdown>{cvContent}</ReactMarkdown>
+            </div>
           )}
           {!cvContent && !isLoading && (
             <div className="absolute inset-0 flex items-center justify-center text-cv-muted">

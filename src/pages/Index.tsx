@@ -1,15 +1,18 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Layout from '@/components/layout/Layout';
 import JobDescriptionInput from '@/components/cv/JobDescriptionInput';
 import CvPreview from '@/components/cv/CvPreview';
 import CvPromptModal from '@/components/cv/CvPromptModal';
+import QuestionAnswerForm from '@/components/cv/QuestionAnswerForm';
 import { generateCvFromJobDescription, improveCvWithPrompt } from '@/services/openai';
 import { saveCvToSupabase } from '@/services/supabase';
+import { getQuestions, saveQuestionsToSupabase, QuestionAnswer } from '@/services/questionsService';
 import { useToast } from '@/components/ui/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const Index = () => {
   const [jobDescription, setJobDescription] = useState('');
@@ -18,7 +21,25 @@ const Index = () => {
   const [isPromptModalOpen, setIsPromptModalOpen] = useState(false);
   const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
   const [cvTitle, setCvTitle] = useState('');
+  const [questions, setQuestions] = useState<QuestionAnswer[]>([]);
+  const [isQuestionsLoading, setIsQuestionsLoading] = useState(false);
   const { toast } = useToast();
+
+  useEffect(() => {
+    const loadQuestions = async () => {
+      setIsQuestionsLoading(true);
+      try {
+        const loadedQuestions = await getQuestions();
+        setQuestions(loadedQuestions);
+      } catch (error) {
+        console.error('Error loading questions:', error);
+      } finally {
+        setIsQuestionsLoading(false);
+      }
+    };
+    
+    loadQuestions();
+  }, []);
 
   const handleAnalyze = async () => {
     if (!jobDescription.trim()) return;
@@ -101,6 +122,20 @@ const Index = () => {
     }
   };
 
+  const handleSaveQuestions = async (updatedQuestions: QuestionAnswer[]) => {
+    try {
+      await saveQuestionsToSupabase(updatedQuestions);
+      setQuestions(updatedQuestions);
+    } catch (error) {
+      console.error('Error saving questions:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save questions. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <Layout>
       <div className="container mx-auto py-8 px-4">
@@ -111,21 +146,37 @@ const Index = () => {
           </p>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-6">
-          <JobDescriptionInput
-            jobDescription={jobDescription}
-            setJobDescription={setJobDescription}
-            onAnalyze={handleAnalyze}
-            isLoading={isLoading}
-          />
-          <CvPreview
-            cvContent={cvContent}
-            setCvContent={setCvContent}
-            onPromptUpdate={() => setIsPromptModalOpen(true)}
-            onSave={handleSave}
-            isLoading={isLoading}
-          />
-        </div>
+        <Tabs defaultValue="cv" className="w-full">
+          <TabsList className="mb-6 mx-auto flex justify-center">
+            <TabsTrigger value="cv">CV Builder</TabsTrigger>
+            <TabsTrigger value="questions">Application Questions</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="cv">
+            <div className="grid md:grid-cols-2 gap-6">
+              <JobDescriptionInput
+                jobDescription={jobDescription}
+                setJobDescription={setJobDescription}
+                onAnalyze={handleAnalyze}
+                isLoading={isLoading}
+              />
+              <CvPreview
+                cvContent={cvContent}
+                setCvContent={setCvContent}
+                onPromptUpdate={() => setIsPromptModalOpen(true)}
+                onSave={handleSave}
+                isLoading={isLoading}
+              />
+            </div>
+          </TabsContent>
+          
+          <TabsContent value="questions">
+            <QuestionAnswerForm 
+              onSave={handleSaveQuestions}
+              initialQuestions={questions}
+            />
+          </TabsContent>
+        </Tabs>
       </div>
 
       <CvPromptModal
